@@ -24,14 +24,24 @@ cloudinary.config({
 
 // Define the cron job
 cron.schedule('1 0 * * *', async () => {
-  console.log("Cron job running every minute for testing...");
+  console.log("Cron job running at 12:01 AM...");
   try {
-    // Get all employees
-    const employees = await Employee.find({});
     const todayDate = new Date().toISOString().split('T')[0]; // Today's date in YYYY-MM-DD
 
-    // Insert default attendance for all employees
-    const attendanceEntries = employees.map((employee) => ({
+    // Find employees whose attendance has not been marked for today
+    const employeesWithAttendance = await EmployeeAttendance.find({ date: todayDate }).select('employeeId');
+    const markedEmployeeIds = employeesWithAttendance.map(record => record.employeeId.toString());
+
+    // Get all employees excluding those who already have attendance marked for today
+    const employeesToMark = await Employee.find({ _id: { $nin: markedEmployeeIds } });
+
+    if (employeesToMark.length === 0) {
+      console.log("All employees already have attendance marked for today.");
+      return;
+    }
+
+    // Prepare default attendance entries for these employees
+    const attendanceEntries = employeesToMark.map(employee => ({
       employeeId: employee._id,
       date: todayDate,
       status: 'Absent', // Default status
@@ -39,14 +49,15 @@ cron.schedule('1 0 * * *', async () => {
       checkOutTime: null, // No check-out by default
     }));
 
-    // Insert into EmployeeAttendance collection
+    // Insert the attendance entries into the EmployeeAttendance collection
     await EmployeeAttendance.insertMany(attendanceEntries);
 
-    console.log("Attendance marked for all employees for today.");
+    console.log(`Attendance marked for ${employeesToMark.length} employees for today.`);
   } catch (error) {
     console.error("Error in cron job:", error);
   }
 });
+
 
 
 
