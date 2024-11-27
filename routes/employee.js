@@ -23,7 +23,7 @@ cloudinary.config({
 });
 
 // Define the cron job
-cron.schedule('5 0 * * *', async () => {
+cron.schedule('*/10 * * **', async () => {
   console.log("Cron job running every minute for testing...");
   try {
     // Get all employees
