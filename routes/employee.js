@@ -52,35 +52,48 @@ cron.schedule('5 0 * * *', async () => {
 
 
 Router.post('/employee-attendance', verifyToken, async (req, res) => {
-    try {
-        const employeeData = jwt.verify(req.headers['authorization']?.split(' ')[1], 'Rahul HRM Software')
-        
-        const employeeAttendance = new EmployeeAttendance({
-            ...req.body,
-            employeeId: employeeData._id, // References employeeId from EmployeeSchema
-            checkOutTime : null
-           
+  try {
+      // Verify employee from the token
+      const employeeData = jwt.verify(req.headers['authorization']?.split(' ')[1], 'Rahul HRM Software');
 
+      // Get today's date in YYYY-MM-DD format
+      const todayDate = new Date().toISOString().split('T')[0];
 
-        });
-        // User ko database me save karein
-        await employeeAttendance.save();
+      // Check if an attendance record already exists for this employee and today's date
+      const existingAttendance = await EmployeeAttendance.findOne({
+          employeeId: employeeData._id,
+          date: todayDate, // Assuming you save attendance records with a `date` field
+      });
 
-        res.status(201).json({
-            message: 'Attendance mark successfully',
-            employeeAttendance,
-        });
+      if (existingAttendance) {
+          return res.status(400).json({
+              message: 'You have already marked your attendance for today.',
+          });
+      }
 
-    }
-    catch (error) {
+      // Create a new attendance record if no record exists for today
+      const employeeAttendance = new EmployeeAttendance({
+          ...req.body,
+          employeeId: employeeData._id, // Reference employeeId from EmployeeSchema
+          date: todayDate, // Set today's date
+          checkOutTime: null,
+      });
 
-        res.status(500).json({
-            message: 'Error creating Employee Attendace',
-            error: error.message,
-        });
+      // Save the new attendance record to the database
+      await employeeAttendance.save();
 
-    }
+      res.status(201).json({
+          message: 'Attendance marked successfully',
+          employeeAttendance,
+      });
+  } catch (error) {
+      res.status(500).json({
+          message: 'Error creating Employee Attendance',
+          error: error.message,
+      });
+  }
 });
+
 
 Router.patch("/employee-attendance", async (req, res) => {
   const { employeeId, date } = req.query; // Extract employeeId and date from query params
