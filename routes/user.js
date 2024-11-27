@@ -18,42 +18,7 @@ cloudinary.config({
         
 })
 
-// Endpoint to get all employees
-Router.get('/employee-list',verifyToken, async (req, res) => {
-    try {
-        const user = await User.find({ officialEmail: req.query.email });
-        console.log(user)
-        if (user.length === 0) {
-            return res.status(500).json({ error: 'User not found' });
-        }
 
-        // Check if `simple` query parameter is provided
-        const isSimple = req.query.simple === 'true';
-        
-
-        // Decide fields to return based on `simple` parameter
-        const fields = isSimple
-            ? { 'employee_id': 1, 'first_name': 1, 'last_name': 1, '_id': 1 }
-            : {}; // Empty object to select all fields
-
-        // Fetch employees with specified fields
-        const employee = await Employee.find({}, fields);
-
-        // If `simple` is true, transform the response for dropdown
-        const transformedEmployees = isSimple
-            ? employee.map(emp => ({
-                  _id: emp._id,
-                  employee_id: emp.employee_id,
-                  first_name: emp.first_name,
-                  last_name: emp.last_name,
-              }))
-            : employee; // Return the full data if `simple` is not set
-
-        res.json(transformedEmployees);
-    } catch (error) {
-        res.status(500).json({ message: 'Error fetching users' });
-    }
-});
 
 
 Router.patch("/edit-employee/:id", async (req, res) => {
@@ -153,8 +118,7 @@ Router.post('/login', async (req, res) => {
         
         if (user.length == 0) {
             return res.status(500).json({
-                error: 'User not found'
-                
+                error: 'User not found'               
 
             })
             
