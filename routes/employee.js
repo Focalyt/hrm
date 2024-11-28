@@ -142,40 +142,57 @@ Router.patch("/employee-attendance", async (req, res) => {
 
 
 Router.get("/employee-attendance", verifyToken, async (req, res) => {
-  const { employeeId, from, to, status, page = 1, limit = 10, sortBy = "date", sortOrder = "asc" } = req.query;
-  const { role } = req.user;
+  const {
+    employeeId, // Specific employee's attendance
+    from, // Filter from date
+    to, // Filter to date
+    status, // Attendance status filter
+    page = 1, // Page number for pagination
+    limit = 10, // Records per page
+    sortBy = "date", // Sort by field
+    sortOrder = "asc" // Sort direction
+  } = req.query;
+
+  const { role } = req.user; // Extract role from token
 
   try {
     let filter = {};
 
+    // Role-based filtering logic
     if (role === "employee") {
-      filter.employeeId = req.user._id;
-    } else if (role === "HR" && employeeId) {
-      filter.employeeId = employeeId;
-    }
-    else if (role === "admin" && employeeId) {
-      filter.employeeId = employeeId;
+      filter.employeeId = req.user._id; // Only their own attendance
+    } else if (role === "HR" || role === "admin") {
+      // HR/Admin can fetch:
+      // - All employees' attendance (if no employeeId is specified)
+      // - Specific employee's attendance (if employeeId is specified)
+      if (employeeId) {
+        filter.employeeId = employeeId;
+      }
     } else {
       return res.status(403).json({ message: "Unauthorized access." });
     }
 
+    // Date range filtering
     if (from || to) {
       filter.date = {};
       if (from) filter.date.$gte = new Date(from);
       if (to) filter.date.$lte = new Date(to);
     }
 
+    // Status filtering
     if (status && status !== "All") {
       filter.status = status;
     }
 
     const skip = (page - 1) * limit;
 
+    // Fetch filtered attendance records with sorting and pagination
     const attendance = await EmployeeAttendance.find(filter)
-      .sort({ [sortBy]: sortOrder === "asc" ? 1 : -1 }) // Sorting logic
+      .sort({ [sortBy]: sortOrder === "asc" ? 1 : -1 })
       .skip(skip)
       .limit(parseInt(limit));
 
+    // Count total records for pagination
     const totalRecords = await EmployeeAttendance.countDocuments(filter);
 
     return res.status(200).json({ attendance, totalRecords });
@@ -184,6 +201,7 @@ Router.get("/employee-attendance", verifyToken, async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
+
 
 
 // Endpoint to get all employees
