@@ -152,6 +152,9 @@ Router.get("/employee-attendance", verifyToken, async (req, res) => {
       filter.employeeId = req.user._id;
     } else if (role === "HR" && employeeId) {
       filter.employeeId = employeeId;
+    }
+    else if (role === "admin" && employeeId) {
+      filter.employeeId = employeeId;
     } else {
       return res.status(403).json({ message: "Unauthorized access." });
     }
