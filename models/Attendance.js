@@ -13,7 +13,7 @@ const AttendanceSchema = new mongoose.Schema({
     default: "Absent" 
   }, // Attendance status
   workLocation: { type: String},
-  travelingStatus: { type: Boolean, default:null},
+  travelingStatus: { type: String, default:null},
   remarks: { type: String },
 })
 
