@@ -73,8 +73,7 @@ Router.post('/employee-attendance', verifyToken, async (req, res) => {
     // Check if an attendance record already exists for this employee and today's date
     const existingAttendance = await EmployeeAttendance.findOne({
       employeeId: employeeData._id,
-      first_name: employeeDataemployeeData.first_name,
-      last_name: employeeData.last_name,
+      
       date: todayDate, // Assuming you save attendance records with a `date` field
     });
 
@@ -88,6 +87,8 @@ Router.post('/employee-attendance', verifyToken, async (req, res) => {
     const employeeAttendance = new EmployeeAttendance({
       ...req.body,
       employeeId: employeeData._id, // Reference employeeId from EmployeeSchema
+      first_name: employeeDataemployeeData.first_name,
+      last_name: employeeData.last_name,
       date: todayDate, // Set today's date
       checkOutTime: null,
     });
