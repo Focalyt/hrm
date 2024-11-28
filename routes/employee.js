@@ -154,6 +154,7 @@ Router.get("/employee-attendance", verifyToken, async (req, res) => {
   } = req.query;
 
   const { role } = req.user; // Extract role from token
+  console.log(role)
 
   try {
     let filter = {};
