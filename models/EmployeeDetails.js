@@ -85,6 +85,9 @@ const EmployeeSchema = new mongoose.Schema({
       emergency_contact_phone: { type: String },
       emergency_contact_email: { type: String },
     },
+    userType:{
+      type:Number, default:0
+    }
     // access_control: {
     //   role: { type: String },
     //   permissions: {
