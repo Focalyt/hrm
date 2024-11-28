@@ -16,9 +16,9 @@ require('dotenv').config();
 
 cloudinary.config({
 
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
 
 });
 
@@ -64,44 +64,46 @@ cron.schedule('1 0 * * *', async () => {
 
 Router.post('/employee-attendance', verifyToken, async (req, res) => {
   try {
-      // Verify employee from the token
-      const employeeData = jwt.verify(req.headers['authorization']?.split(' ')[1], 'Rahul HRM Software');
+    // Verify employee from the token
+    const employeeData = jwt.verify(req.headers['authorization']?.split(' ')[1], 'Rahul HRM Software');
 
-      // Get today's date in YYYY-MM-DD format
-      const todayDate = new Date().toISOString().split('T')[0];
+    // Get today's date in YYYY-MM-DD format
+    const todayDate = new Date().toISOString().split('T')[0];
 
-      // Check if an attendance record already exists for this employee and today's date
-      const existingAttendance = await EmployeeAttendance.findOne({
-          employeeId: employeeData._id,
-          date: todayDate, // Assuming you save attendance records with a `date` field
+    // Check if an attendance record already exists for this employee and today's date
+    const existingAttendance = await EmployeeAttendance.findOne({
+      employeeId: employeeData._id,
+      first_name: employeeDataemployeeData.first_name,
+      last_name: employeeData.last_name,
+      date: todayDate, // Assuming you save attendance records with a `date` field
+    });
+
+    if (existingAttendance) {
+      return res.status(400).json({
+        message: 'You have already marked your attendance for today.',
       });
+    }
 
-      if (existingAttendance) {
-          return res.status(400).json({
-              message: 'You have already marked your attendance for today.',
-          });
-      }
+    // Create a new attendance record if no record exists for today
+    const employeeAttendance = new EmployeeAttendance({
+      ...req.body,
+      employeeId: employeeData._id, // Reference employeeId from EmployeeSchema
+      date: todayDate, // Set today's date
+      checkOutTime: null,
+    });
 
-      // Create a new attendance record if no record exists for today
-      const employeeAttendance = new EmployeeAttendance({
-          ...req.body,
-          employeeId: employeeData._id, // Reference employeeId from EmployeeSchema
-          date: todayDate, // Set today's date
-          checkOutTime: null,
-      });
+    // Save the new attendance record to the database
+    await employeeAttendance.save();
 
-      // Save the new attendance record to the database
-      await employeeAttendance.save();
-
-      res.status(201).json({
-          message: 'Attendance marked successfully',
-          employeeAttendance,
-      });
+    res.status(201).json({
+      message: 'Attendance marked successfully',
+      employeeAttendance,
+    });
   } catch (error) {
-      res.status(500).json({
-          message: 'Error creating Employee Attendance',
-          error: error.message,
-      });
+    res.status(500).json({
+      message: 'Error creating Employee Attendance',
+      error: error.message,
+    });
   }
 });
 
@@ -206,39 +208,39 @@ Router.get("/employee-attendance", verifyToken, async (req, res) => {
 
 
 // Endpoint to get all employees
-Router.get('/employee-list',verifyToken, async (req, res) => {
+Router.get('/employee-list', verifyToken, async (req, res) => {
   try {
-      const user = await Employee.find({ officialEmail: req.query.email });
-      console.log(user)
-      if (user.length === 0) {
-          return res.status(500).json({ error: 'User not found' });
-      }
+    const user = await Employee.find({ officialEmail: req.query.email });
+    console.log(user)
+    if (user.length === 0) {
+      return res.status(500).json({ error: 'User not found' });
+    }
 
-      // Check if `simple` query parameter is provided
-      const isSimple = req.query.simple === 'true';
-      
+    // Check if `simple` query parameter is provided
+    const isSimple = req.query.simple === 'true';
 
-      // Decide fields to return based on `simple` parameter
-      const fields = isSimple
-          ? { 'employee_id': 1, 'first_name': 1, 'last_name': 1, '_id': 1 }
-          : {}; // Empty object to select all fields
 
-      // Fetch employees with specified fields
-      const employee = await Employee.find({}, fields);
+    // Decide fields to return based on `simple` parameter
+    const fields = isSimple
+      ? { 'employee_id': 1, 'first_name': 1, 'last_name': 1, '_id': 1 }
+      : {}; // Empty object to select all fields
 
-      // If `simple` is true, transform the response for dropdown
-      const transformedEmployees = isSimple
-          ? employee.map(emp => ({
-                _id: emp._id,
-                employee_id: emp.employee_id,
-                first_name: emp.first_name,
-                last_name: emp.last_name,
-            }))
-          : employee; // Return the full data if `simple` is not set
+    // Fetch employees with specified fields
+    const employee = await Employee.find({}, fields);
 
-      res.json(transformedEmployees);
+    // If `simple` is true, transform the response for dropdown
+    const transformedEmployees = isSimple
+      ? employee.map(emp => ({
+        _id: emp._id,
+        employee_id: emp.employee_id,
+        first_name: emp.first_name,
+        last_name: emp.last_name,
+      }))
+      : employee; // Return the full data if `simple` is not set
+
+    res.json(transformedEmployees);
   } catch (error) {
-      res.status(500).json({ message: 'Error fetching users' });
+    res.status(500).json({ message: 'Error fetching users' });
   }
 });
 
@@ -312,65 +314,65 @@ Router.post('/login', async (req, res) => {
   }
 });
 
-  
+
 
 Router.post('/add-employee', async (req, res) => {
-    try {
-        const files = req.files || {}; // Ensures `req.files` is defined
+  try {
+    const files = req.files || {}; // Ensures `req.files` is defined
 
-        // Helper function to upload file if exists
-        const uploadFile = async (file) => {
-            if (file && file.tempFilePath) {
-                const upload = await cloudinary.uploader.upload(file.tempFilePath);
-                return {
-                    secure_url: upload.secure_url,
-                    public_id: upload.public_id,
-                };
-            }
-            return { secure_url: null, public_id: null }; // Return default values if file is missing
+    // Helper function to upload file if exists
+    const uploadFile = async (file) => {
+      if (file && file.tempFilePath) {
+        const upload = await cloudinary.uploader.upload(file.tempFilePath);
+        return {
+          secure_url: upload.secure_url,
+          public_id: upload.public_id,
         };
+      }
+      return { secure_url: null, public_id: null }; // Return default values if file is missing
+    };
 
-        const uploadProfilePic = await uploadFile(files.profilePic);
-        const uploadAadhaar = await uploadFile(files.aadhaar);
-        const uploadPanCard = await uploadFile(files.panCard);
-        const uploadResume = await uploadFile(files.resume);
-        const uploadOfferLetter = await uploadFile(files.offerLetter);
-        const uploadEducationDoccument = await uploadFile(files.educationDoccument);
+    const uploadProfilePic = await uploadFile(files.profilePic);
+    const uploadAadhaar = await uploadFile(files.aadhaar);
+    const uploadPanCard = await uploadFile(files.panCard);
+    const uploadResume = await uploadFile(files.resume);
+    const uploadOfferLetter = await uploadFile(files.offerLetter);
+    const uploadEducationDoccument = await uploadFile(files.educationDoccument);
 
-        const employee = new Employee({
-            ...req.body,
-            photo_url: uploadProfilePic.secure_url,
-            photo_Id: uploadProfilePic.public_id,
-            documents: {
-                aadhaarUrl: uploadAadhaar.secure_url,
-                aadhaar_id: uploadAadhaar.public_id,
-                panUrl: uploadPanCard.secure_url,
-                pan_id: uploadPanCard.public_id,
-                resumeUrl: uploadResume.secure_url,
-                resume_id: uploadResume.public_id,
-                offer_letter_id: uploadOfferLetter.public_id,
-                offer_letterUrl: uploadOfferLetter.secure_url,
-                educationDoccumentUrl: uploadEducationDoccument.secure_url,
-                educationDoccument_id: uploadEducationDoccument.public_id
-            }
-        });
+    const employee = new Employee({
+      ...req.body,
+      photo_url: uploadProfilePic.secure_url,
+      photo_Id: uploadProfilePic.public_id,
+      documents: {
+        aadhaarUrl: uploadAadhaar.secure_url,
+        aadhaar_id: uploadAadhaar.public_id,
+        panUrl: uploadPanCard.secure_url,
+        pan_id: uploadPanCard.public_id,
+        resumeUrl: uploadResume.secure_url,
+        resume_id: uploadResume.public_id,
+        offer_letter_id: uploadOfferLetter.public_id,
+        offer_letterUrl: uploadOfferLetter.secure_url,
+        educationDoccumentUrl: uploadEducationDoccument.secure_url,
+        educationDoccument_id: uploadEducationDoccument.public_id
+      }
+    });
 
 
-        // User ko database me save karein
-        await employee.save();
+    // User ko database me save karein
+    await employee.save();
 
-        res.status(201).json({
-            message: 'Employee created successfully',
-            employee,
-        });
+    res.status(201).json({
+      message: 'Employee created successfully',
+      employee,
+    });
 
-    } catch (error) {
+  } catch (error) {
 
-        res.status(500).json({
-            message: 'Error creating Employee',
-            error: error.message,
-        });
-    }
+    res.status(500).json({
+      message: 'Error creating Employee',
+      error: error.message,
+    });
+  }
 });
 
 
