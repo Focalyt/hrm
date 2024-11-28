@@ -87,7 +87,7 @@ Router.post('/employee-attendance', verifyToken, async (req, res) => {
     const employeeAttendance = new EmployeeAttendance({
       ...req.body,
       employeeId: employeeData._id, // Reference employeeId from EmployeeSchema
-      first_name: employeeDataemployeeData.first_name,
+      first_name: employeeData.first_name,
       last_name: employeeData.last_name,
       date: todayDate, // Set today's date
       checkOutTime: null,
