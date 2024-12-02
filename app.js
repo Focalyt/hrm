@@ -6,7 +6,7 @@ const fileUpload = require('express-fileupload')
 const cors = require('cors');
 const verifyTokenRoutes = require('./routes/verify-token');
 const userRoutes = require('./routes/user');
-const employeeRoutes = require('./routes/employee');
+const employeeRoutes = require('./routes/employees');
 const path = require('path');
 
 
