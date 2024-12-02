@@ -44,6 +44,12 @@ const EmployeeSchema = new mongoose.Schema({
       joining_date: { type: Date },
       termination_date: { type: String },
       manager_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee' }, // Changed to ObjectId
+      team_members: [
+        {
+          member_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee' },
+          member_name: { type: String },
+        },
+      ],
       team: [
         {
           team_id: { type: String },
@@ -73,10 +79,14 @@ const EmployeeSchema = new mongoose.Schema({
       pan_id: { type: String },      
       resumeUrl: { type: String },
       resume_id: { type: String },
+      expLetterUrl: { type: String },
+      expLetter_id: { type: String },
       offer_letterUrl: { type: String },
       offer_letter_id: { type: String },
+      educationDocuments:[{
+      doccumnentName: { type: String }, 
       educationDoccumentUrl: { type: String },      
-      educationDoccument_id: { type: String },
+      educationDoccument_id: { type: String },}]
     },
    
     emergency_contact: {

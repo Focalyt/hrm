@@ -1,7 +1,8 @@
 const express = require('express');
 const Router = express.Router();
 const cloudinary = require('cloudinary').v2;
-const Employee = require('../models/EmployeeDetails');
+const Employee = require('../models/Employee');
+const Category = require('../models/Category');
 const bcrypt = require('bcrypt')
 const EmployeeAttendance = require('../models/Attendance');
 
@@ -21,6 +22,203 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 
 });
+
+// Get all categories with their subcategories
+Router.get("/categories", async (req, res) => {
+  try {
+    const { page = 1, limit } = req.query;
+    const skip = (page - 1) * limit;
+
+    const categories = await Category.find().skip(skip).limit(Number(limit));
+    const totalRecords = await Category.countDocuments();
+
+    res.status(200).json({
+      categories, // Ensure this is always an array
+      totalRecords,
+      totalPages: Math.ceil(totalRecords / limit),
+    });
+
+  } catch (error) {
+    console.error("Error fetching categories:", error);
+    res.status(500).json({ error: "Failed to fetch categories" });
+  }
+
+});
+
+Router.put("/categories/:categoryId/:subCategoryId", async (req, res) => {
+  const { categoryId, subCategoryId } = req.params;
+  const { assignto } = req.body;
+
+  try {
+    // Find the category by ID
+    const category = await Category.findById(categoryId);
+    if (!category) {
+      return res.status(404).json({ error: "Category not found" });
+    }
+
+    // Find the subcategory within the category
+    const subCategory = category.subCategories.id(subCategoryId);
+    if (!subCategory) {
+      return res.status(404).json({ error: "Subcategory not found" });
+    }
+
+    // Replace the entire assignTo array
+    if (assignto && Array.isArray(assignto)) {
+      subCategory.assignto = assignto; // Completely overwrite the array
+    } else {
+      return res.status(400).json({ error: "Invalid assignTo format" });
+    }
+
+    // Save changes
+    await category.save();
+
+    res.status(200).json({ message: "AssignTo updated successfully", category });
+  } catch (error) {
+    console.error("Error updating assignTo:", error);
+    res.status(500).json({ error: "Failed to update assignTo" });
+  }
+});
+
+
+Router.patch("/categories/:categoryId/:subCategoryId", async (req, res) => {
+  const { categoryId, subCategoryId } = req.params;
+  const { subCategoryName, status, assignto } = req.body;
+
+  try {
+    // Find the category by ID
+    const category = await Category.findById(categoryId);
+    if (!category) {
+      return res.status(404).json({ error: "Category not found" });
+    }
+
+    // Find the subcategory within the category
+    const subCategory = category.subCategories.id(subCategoryId);
+    if (!subCategory) {
+      return res.status(404).json({ error: "Subcategory not found" });
+    }
+
+    // Update status
+    if (typeof status === "boolean") {
+      subCategory.status = status;
+    }
+
+    // Update subcategory name if provided
+    if (subCategoryName) {
+      subCategory.subCategoryName = subCategoryName;
+    }
+
+    // Append to assignTo if provided
+    if (assignto && Array.isArray(assignto)) {
+      assignto.forEach((newAssign) => {
+        if (
+          !subCategory.assignto.some(
+            (existingAssign) => existingAssign.employeeId === newAssign.employeeId
+          )
+        ) {
+          subCategory.assignto.push(newAssign);
+        }
+      });
+    }
+
+    // Save changes
+    await category.save();
+
+    res.status(200).json({ message: "Subcategory updated successfully", category });
+  } catch (error) {
+    console.error("Error updating subcategory:", error);
+    res.status(500).json({ error: "Failed to update subcategory" });
+  }
+});
+
+
+
+
+Router.patch("/categories/:categoryId", async (req, res) => {
+  const { categoryId } = req.params;
+  const { category_name, subCategoryName, assignto, status } = req.body;
+
+  try {
+    // Fetch the category by ID
+    const category = await Category.findById(categoryId);
+    if (!category) {
+      return res.status(404).json({ error: "Category not found" });
+    }
+
+    // Update category-level name if provided
+    if (category_name) {
+      category.category_name = category_name;
+    }
+
+    // Update category-level status if provided
+    if (typeof status === "boolean") {
+      category.status = status;
+    }
+
+    // Initialize subCategories if not already present
+    if (!category.subCategories) {
+      category.subCategories = [];
+    }
+
+    // If `subCategoryName` is provided, process the addition or update
+    if (subCategoryName) {
+      // Check if the sub-category already exists
+      const duplicate = category.subCategories.some(
+        (subCat) => subCat.subCategoryName === subCategoryName
+      );
+
+      if (duplicate) {
+        return res.status(400).json({ error: "Sub-category already exists" });
+      }
+
+      // Add new sub-category with optional assignto field
+      category.subCategories.push({
+        subCategoryName,
+        assignto: assignto || [], // Default to an empty array if `assignto` is not provided
+      });
+    }
+
+    // Save the changes
+    await category.save();
+
+    res.status(200).json({
+      message: "Category updated successfully",
+      category,
+    });
+  } catch (error) {
+    console.error("Error updating category:", error);
+    res.status(500).json({ error: "Failed to update category" });
+  }
+});
+
+
+
+
+
+// Add a new category
+Router.post('/categories', async (req, res) => {
+  try {
+    const category = new Category({
+      ...req.body,
+
+    });
+    // User ko database me save karein
+    await category.save();
+
+    res.status(201).json({
+      message: 'Employee created successfully',
+      category,
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      message: 'Error creating Employee',
+      error: error.message,
+    });
+  }
+});
+
+
 
 // Define the cron job
 cron.schedule('1 0 * * *', async () => {
@@ -73,7 +271,7 @@ Router.post('/employee-attendance', verifyToken, async (req, res) => {
     // Check if an attendance record already exists for this employee and today's date
     const existingAttendance = await EmployeeAttendance.findOne({
       employeeId: employeeData._id,
-      
+
       date: todayDate, // Assuming you save attendance records with a `date` field
     });
 
@@ -157,7 +355,7 @@ Router.get("/employee-attendance", verifyToken, async (req, res) => {
   } = req.query;
 
   const { role } = req.user; // Extract role from token
-  console.log(role)
+  
 
   try {
     let filter = {};
@@ -206,13 +404,50 @@ Router.get("/employee-attendance", verifyToken, async (req, res) => {
   }
 });
 
+Router.patch("/edit-employee/:id", async (req, res) => {
+  const { id } = req.params; // Employee ID from the URL
+  const updates = req.body; // Updates from the request body
 
+  // Validate the ID
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({ message: "Invalid employee ID" });
+  }
+
+  // Check if there are updates
+  if (Object.keys(updates).length === 0) {
+    return res.status(400).json({ message: "No fields provided for update" });
+  }
+
+  try {
+    // Update the employee using $set for partial and nested updates
+    const updatedEmployee = await Employee.findByIdAndUpdate(
+      id,
+      { $set: updates }, // Use $set for partial updates
+      { new: true, runValidators: true } // Return the updated document and validate inputs
+    );
+
+    if (!updatedEmployee) {
+      return res.status(404).json({ message: "Employee not found" });
+    }
+
+    res.status(200).json({
+      message: "Employee updated successfully",
+      employee: updatedEmployee,
+    });
+  } catch (error) {
+    console.error("Error updating employee:", error);
+    res.status(500).json({
+      message: "Failed to update employee",
+      error: error.message,
+    });
+  }
+});
 
 // Endpoint to get all employees
 Router.get('/employee-list', verifyToken, async (req, res) => {
   try {
     const user = await Employee.find({ officialEmail: req.query.email });
-    console.log(user)
+   
     if (user.length === 0) {
       return res.status(500).json({ error: 'User not found' });
     }
@@ -314,6 +549,8 @@ Router.post('/login', async (req, res) => {
     });
   }
 });
+
+
 
 
 
