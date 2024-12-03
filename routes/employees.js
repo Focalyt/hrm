@@ -26,11 +26,20 @@ cloudinary.config({
 // Get all categories with their subcategories
 Router.get("/categories", async (req, res) => {
   try {
-    const { page = 1, limit } = req.query;
+    const { page = 1, limit,categoryId } = req.query;
+    if (categoryId) {
+      // Fetch specific category by ID
+      const category = await Category.findById(categoryId);
+      if (!category) {
+        return res.status(404).json({ error: "Category not found" });
+      }
+      return res.status(200).json({ category });
+    }
     const skip = (page - 1) * limit;
 
     const categories = await Category.find().skip(skip).limit(Number(limit));
     const totalRecords = await Category.countDocuments();
+
 
     res.status(200).json({
       categories, // Ensure this is always an array
